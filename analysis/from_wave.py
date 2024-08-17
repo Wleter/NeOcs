@@ -2,6 +2,8 @@ from matplotlib import animation
 import numpy as np
 import matplotlib.pyplot as plt
 
+ps = 41341.374
+
 def wave_animation(prefix):
     path = "../data"
     
@@ -42,3 +44,21 @@ def angular_animation(prefix):
 
     anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
     return anim
+
+def loss_plot(prefix): 
+    path = "../data/"
+
+    xpi = np.loadtxt(f'{path}/{prefix}_xpi.dat', skiprows=1, delimiter="\t")
+    bsigma = np.loadtxt(f'{path}/{prefix}_bsigma.dat', skiprows=1, delimiter="\t")
+
+    fig, ax = plt.subplots()
+    ax.grid()
+    ax.tick_params(which='both', direction="in")
+    
+    ax.plot(xpi[:, 0] / ps, 100 * xpi[:, 1], label="XPi")
+    ax.plot(bsigma[:, 0] / ps, 100 * bsigma[:, 1], label="A + B")
+    ax.set_xlabel('Time [ps]')
+    ax.set_ylabel('Loss [%]')
+    ax.legend()
+
+    return fig, ax
