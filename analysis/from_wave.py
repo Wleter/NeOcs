@@ -1,6 +1,7 @@
 from matplotlib import animation
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.special import roots_legendre
 
 ps = 41341.374
 
@@ -39,11 +40,37 @@ def angular_animation(prefix):
     def animate(i):
         ax.clear()
         ax.plot(l, wave[:, i])
+        if int(l[0]) != 0:
+            ax.scatter([k for k in range(int(l[0]))], [0 for _ in range(int(l[0]))], s=0.5)
+
         ax.set_xlabel('Angular momentum j')
         ax.set_ylabel('Wave function density')
 
     anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
     return anim
+
+def alignement(prefix): 
+    path = "../data/"
+
+    wave = np.load(f'{path}/{prefix}_polar_animation.npy')
+    l = np.load(f'{path}/{prefix}_polar_animation_theta_grid.npy')
+
+    points, weights = roots_legendre(l.shape[0])
+    weights = np.flip(weights)
+    points = np.flip(points)
+    
+    align = (points ** 2) @ wave
+    
+    fig, ax = plt.subplots()
+    ax.grid()
+    ax.tick_params(which='both', direction="in")
+    
+    ax.plot(align)
+    ax.set_xlabel('propagation frame')
+    ax.set_ylabel('<$cos^2(\\theta)$>')
+    ax.legend()
+
+    return fig, ax
 
 def loss_plot(prefix): 
     path = "../data/"
@@ -62,3 +89,6 @@ def loss_plot(prefix):
     ax.legend()
 
     return fig, ax
+
+if __name__ == "__main__":
+    angular_animation("standard_1_1")
