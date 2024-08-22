@@ -54,6 +54,7 @@ def alignement(prefix):
 
     wave = np.load(f'{path}/{prefix}_polar_animation.npy')
     l = np.load(f'{path}/{prefix}_polar_animation_theta_grid.npy')
+    time = np.load(f'{path}/{prefix}_polar_animation_time.npy') / ps
 
     points, weights = roots_legendre(l.shape[0])
     weights = np.flip(weights)
@@ -65,10 +66,33 @@ def alignement(prefix):
     ax.grid()
     ax.tick_params(which='both', direction="in")
     
-    ax.plot(align)
-    ax.set_xlabel('propagation frame')
+    ax.plot(time, align)
+    ax.set_xlabel('time [ps]')
     ax.set_ylabel('<$cos^2(\\theta)$>')
-    ax.legend()
+
+    return fig, ax
+
+def alignements(prefixes): 
+    path = "../data/"
+
+    fig, ax = plt.subplots()
+    ax.grid()
+    ax.tick_params(which='both', direction="in")
+    ax.set_xlabel('time [ps]')
+    ax.set_ylabel('<$cos^2(\\theta)$>')
+
+    for prefix in prefixes:
+        wave = np.load(f'{path}/{prefix}_polar_animation.npy')
+        l = np.load(f'{path}/{prefix}_polar_animation_theta_grid.npy')
+        time = np.load(f'{path}/{prefix}_polar_animation_time.npy') / ps
+
+        points, weights = roots_legendre(l.shape[0])
+        weights = np.flip(weights)
+        points = np.flip(points)
+        
+        align = (points ** 2) @ wave
+        
+        ax.plot(time, align)
 
     return fig, ax
 
