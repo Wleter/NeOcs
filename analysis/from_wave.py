@@ -72,7 +72,7 @@ def alignement(prefix):
 
     return fig, ax
 
-def alignements(prefixes): 
+def alignements(prefix, js): 
     path = "../data/"
 
     fig, ax = plt.subplots()
@@ -81,20 +81,30 @@ def alignements(prefixes):
     ax.set_xlabel('time [ps]')
     ax.set_ylabel('<$cos^2(\\theta)$>')
 
-    for prefix in prefixes:
-        wave = np.load(f'{path}/{prefix}_polar_animation.npy')
-        l = np.load(f'{path}/{prefix}_polar_animation_theta_grid.npy')
-        time = np.load(f'{path}/{prefix}_polar_animation_time.npy') / ps
+    for j in js:
+        time, alignment = alignment_from_wave(path, f"{prefix}_{j}_0")
+        alignment /= (2 * j + 1)
 
-        points, weights = roots_legendre(l.shape[0])
-        weights = np.flip(weights)
-        points = np.flip(points)
-        
-        align = (points ** 2) @ wave
-        
-        ax.plot(time, align)
+        for omega in range(1, j+1):
+            _, align = alignment_from_wave(path, f"{prefix}_{j}_{omega}")
+            alignment += 2 / (2 * j + 1) * align
+            
+        ax.plot(time, alignment, label = f"$j = {j}$")
 
     return fig, ax
+
+def alignment_from_wave(path, prefix):
+    wave = np.load(f'{path}/{prefix}_polar_animation.npy')
+    l = np.load(f'{path}/{prefix}_polar_animation_theta_grid.npy')
+    time = np.load(f'{path}/{prefix}_polar_animation_time.npy') / ps
+
+    points, weights = roots_legendre(l.shape[0])
+    weights = np.flip(weights)
+    points = np.flip(points)
+    
+    align = (points ** 2) @ wave
+
+    return time, align
 
 def loss_plot(prefix): 
     path = "../data/"

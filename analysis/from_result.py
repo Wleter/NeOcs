@@ -138,5 +138,5 @@ def plot_ratio_dependence(xlabel, parameters, xpi0, xpi10, xpi11, bsigma0, bsigm
         ax.legend()
 
     ax.set_xlabel(xlabel)
-    ax.set_ylabel("Reaction rate [cm$^3$/s]")
+    ax.set_ylabel("Reaction rate ratio")
     return fig, ax
