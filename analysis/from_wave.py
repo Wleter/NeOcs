@@ -31,7 +31,7 @@ def wave_animation(prefix):
 
 def angular_animation(prefix): 
     path = "../data/"
-
+    
     wave = np.load(f'{path}/{prefix}_angular_animation.npy')
     l = np.load(f'{path}/{prefix}_angular_animation_angular_momentum_grid.npy')
 
@@ -40,10 +40,45 @@ def angular_animation(prefix):
     def animate(i):
         ax.clear()
         ax.plot(l, wave[:, i])
-        if int(l[0]) != 0:
-            ax.scatter([k for k in range(int(l[0]))], [0 for _ in range(int(l[0]))], s=0.5)
 
         ax.set_xlabel('Angular momentum j')
+        ax.set_ylabel('Wave function density')
+
+    anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
+    return anim
+
+def omega_animation(prefix): 
+    path = "../data/"
+
+    wave = np.load(f'{path}/{prefix}_omega_animation.npy')
+    omega = np.load(f'{path}/{prefix}_omega_animation_omega_grid.npy')
+
+    fig, ax = plt.subplots()
+
+    def animate(i):
+        ax.clear()
+        ax.plot(omega, wave[:, i])
+
+        ax.set_xlabel('Angular momentum projection $\Omega$')
+        ax.set_ylabel('Wave function density')
+        ax.set_ylim(0, 1)
+
+    anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
+    return anim
+
+def distance_animation(prefix): 
+    path = "../data/"
+
+    wave = np.load(f'{path}/{prefix}_distance_animation.npy')
+    distance = np.load(f'{path}/{prefix}_distance_animation_r_grid.npy')
+
+    fig, ax = plt.subplots()
+
+    def animate(i):
+        ax.clear()
+        ax.plot(distance, wave[:, i])
+
+        ax.set_xlabel('Distance r [bohr]')
         ax.set_ylabel('Wave function density')
 
     anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
@@ -89,6 +124,21 @@ def alignements(prefix, js):
             _, align = alignment_from_wave(path, f"{prefix}_{j}_{omega}")
             alignment += 2 / (2 * j + 1) * align
             
+        ax.plot(time, alignment, label = f"$j = {j}$")
+
+    return fig, ax
+
+def alignement_mixed(prefix, js): 
+    path = "../data/"
+
+    fig, ax = plt.subplots()
+    ax.grid()
+    ax.tick_params(which='both', direction="in")
+    ax.set_xlabel('time [ps]')
+    ax.set_ylabel('<$cos^2(\\theta)$>')
+
+    for j in js:
+        time, alignment = alignment_from_wave(path, f"{prefix}_{j}")
         ax.plot(time, alignment, label = f"$j = {j}$")
 
     return fig, ax
