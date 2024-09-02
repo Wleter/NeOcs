@@ -47,7 +47,25 @@ def angular_animation(prefix):
     anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
     return anim
 
-def omega_animation(prefix): 
+def polar_animation(prefix): 
+    path = "../data/"
+    
+    wave = np.load(f'{path}/{prefix}_polar_animation.npy')
+    l = np.load(f'{path}/{prefix}_polar_animation_theta_grid.npy')
+
+    fig, ax = plt.subplots()
+
+    def animate(i):
+        ax.clear()
+        ax.plot(l, wave[:, i])
+
+        ax.set_xlabel('Angle [rad]')
+        ax.set_ylabel('Wave function density')
+
+    anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
+    return anim
+
+def omega_animation(prefix):
     path = "../data/"
 
     wave = np.load(f'{path}/{prefix}_omega_animation.npy')
@@ -59,7 +77,7 @@ def omega_animation(prefix):
         ax.clear()
         ax.plot(omega, wave[:, i])
 
-        ax.set_xlabel('Angular momentum projection $\Omega$')
+        ax.set_xlabel('Angular momentum projection $\\Omega$')
         ax.set_ylabel('Wave function density')
         ax.set_ylim(0, 1)
 
@@ -140,6 +158,29 @@ def alignement_mixed(prefix, js):
     for j in js:
         time, alignment = alignment_from_wave(path, f"{prefix}_{j}")
         ax.plot(time, alignment, label = f"$j = {j}$")
+
+    return fig, ax
+
+def alignement_mixed_phases(prefix, phases: list[str]): 
+    path = "../data/"
+
+    fig, ax = plt.subplots()
+    ax.grid()
+    ax.tick_params(which='both', direction="in")
+    ax.set_xlabel('time [ps]')
+    ax.set_ylabel('<$cos^2(\\theta)$>')
+
+    time, alignment = alignment_from_wave(path, f"{prefix}_0_0")
+    ax.plot(time, alignment, label = f"$j = 0$")
+    for phase in phases:
+        time, alignment = alignment_from_wave(path, f"{prefix}_1_phase_{phase}")
+
+        phase = phase.split("_")
+        phase[0] = phase[0].replace("hpi", "pi/2")
+        phase[1] = phase[1].replace("hpi", "pi/2")
+        phase[0] = phase[0].replace("pi", "\\pi")
+        phase[1] = phase[1].replace("pi", "\\pi")
+        ax.plot(time, alignment, label = f"$j = 1, \\phi_1 = {phase[0]}$, " + "$\\phi_{-1} = $" + f"${phase[1]}$")
 
     return fig, ax
 
