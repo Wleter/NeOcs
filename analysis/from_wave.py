@@ -132,7 +132,7 @@ def alignements(prefix, js):
     ax.grid()
     ax.tick_params(which='both', direction="in")
     ax.set_xlabel('time [ps]')
-    ax.set_ylabel('<$cos^2(\\theta)$>')
+    ax.set_ylabel(r'$\left<cos^2(\theta)\right>$')
 
     for j in js:
         time, alignment = alignment_from_wave(path, f"{prefix}_{j}_0")
