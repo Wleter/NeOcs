@@ -3,11 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import roots_legendre
 
+path = "../data"
 ps = 41341.374
 
 def wave_animation(prefix):
-    path = "../data"
-    
     wave = np.load(f'{path}/{prefix}_wave_animation.npy')
     r = np.load(f'{path}/{prefix}_wave_animation_x_grid.npy')
     theta = np.load(f'{path}/{prefix}_wave_animation_y_grid.npy')
@@ -30,8 +29,6 @@ def wave_animation(prefix):
     return anim
 
 def angular_animation(prefix): 
-    path = "../data/"
-    
     wave = np.load(f'{path}/{prefix}_angular_animation.npy')
     l = np.load(f'{path}/{prefix}_angular_animation_angular_momentum_grid.npy')
 
@@ -48,8 +45,6 @@ def angular_animation(prefix):
     return anim
 
 def polar_animation(prefix): 
-    path = "../data/"
-    
     wave = np.load(f'{path}/{prefix}_polar_animation.npy')
     l = np.load(f'{path}/{prefix}_polar_animation_theta_grid.npy')
 
@@ -66,8 +61,6 @@ def polar_animation(prefix):
     return anim
 
 def omega_animation(prefix):
-    path = "../data/"
-
     wave = np.load(f'{path}/{prefix}_omega_animation.npy')
     omega = np.load(f'{path}/{prefix}_omega_animation_omega_grid.npy')
 
@@ -85,8 +78,6 @@ def omega_animation(prefix):
     return anim
 
 def distance_animation(prefix): 
-    path = "../data/"
-
     wave = np.load(f'{path}/{prefix}_distance_animation.npy')
     distance = np.load(f'{path}/{prefix}_distance_animation_r_grid.npy')
 
@@ -103,8 +94,6 @@ def distance_animation(prefix):
     return anim
 
 def alignement(prefix): 
-    path = "../data/"
-
     wave = np.load(f'{path}/{prefix}_polar_animation.npy')
     l = np.load(f'{path}/{prefix}_polar_animation_theta_grid.npy')
     time = np.load(f'{path}/{prefix}_polar_animation_time.npy') / ps
@@ -121,18 +110,16 @@ def alignement(prefix):
     
     ax.plot(time, align)
     ax.set_xlabel('time [ps]')
-    ax.set_ylabel('<$cos^2(\\theta)$>')
+    ax.set_ylabel('$\\left<\\cos^2(\\theta)\\right>$')
 
     return fig, ax
 
 def alignements(prefix, js): 
-    path = "../data/"
-
     fig, ax = plt.subplots()
     ax.grid()
     ax.tick_params(which='both', direction="in")
     ax.set_xlabel('time [ps]')
-    ax.set_ylabel(r'$\left<cos^2(\theta)\right>$')
+    ax.set_ylabel('$\\left<\\cos^2(\\theta)\\right>$')
 
     for j in js:
         time, alignment = alignment_from_wave(path, f"{prefix}_{j}_0")
@@ -146,14 +133,52 @@ def alignements(prefix, js):
 
     return fig, ax
 
-def alignement_mixed(prefix, js): 
-    path = "../data/"
+def alignments_with_distance(prefix, js):
+    fig, ax = alignements(prefix ,js)
 
+    ax2 = ax.twinx()
+    ax2.set_ylabel("distance [bohr]")
+    
+    for j in js:
+        time, distances = distance_from_wave(path, f"{prefix}_{j}_0")
+        distances /= (2 * j + 1)
+
+        for omega in range(1, j+1):
+            _, distance = distance_from_wave(path, f"{prefix}_{j}_{omega}")
+            distances += 2 / (2 * j + 1) * distance
+            
+        ax2.plot(time, distances, alpha=0.3)
+
+    return fig, ax, ax2
+
+def distance_from_wave(path, prefix):
+    wave = np.load(f'{path}/{prefix}_distance_animation.npy')
+    r = np.load(f'{path}/{prefix}_distance_animation_r_grid.npy')
+    time = np.load(f'{path}/{prefix}_distance_animation_time.npy') / ps
+    
+    distances = r @ wave
+    return time, distances
+
+def show_potential(prefix: str):
+    r = np.load(f'{path}/{prefix}_potential_r.npy')
+    theta = np.load(f'{path}/{prefix}_potential_theta.npy')
+    potential_array = np.load(f'{path}/{prefix}_potential.npy')
+    
+    fig, ax = plt.subplots()
+    CS = ax.contourf(r, theta, potential_array, levels=50)
+    cbar = fig.colorbar(CS)
+    cbar.ax.set_ylabel("Energy [cm$^{-1}$]")
+    ax.set_xlabel("R [bohr]")
+    ax.set_ylabel("$\\theta$ [rad]")
+
+    return fig, ax
+
+def alignement_mixed(prefix, js): 
     fig, ax = plt.subplots()
     ax.grid()
     ax.tick_params(which='both', direction="in")
     ax.set_xlabel('time [ps]')
-    ax.set_ylabel('<$cos^2(\\theta)$>')
+    ax.set_ylabel('$\\left<\\cos^2(\\theta)\\right>$')
 
     for j in js:
         time, alignment = alignment_from_wave(path, f"{prefix}_{j}")
@@ -162,16 +187,15 @@ def alignement_mixed(prefix, js):
     return fig, ax
 
 def alignement_mixed_phases(prefix, phases: list[str]): 
-    path = "../data/"
-
     fig, ax = plt.subplots()
     ax.grid()
     ax.tick_params(which='both', direction="in")
     ax.set_xlabel('time [ps]')
-    ax.set_ylabel('<$cos^2(\\theta)$>')
+    ax.set_ylabel('$\\left<\\cos^2(\\theta)\\right>$')
 
     time, alignment = alignment_from_wave(path, f"{prefix}_0_0")
     ax.plot(time, alignment, label = f"$j = 0$")
+
     for phase in phases:
         time, alignment = alignment_from_wave(path, f"{prefix}_1_phase_{phase}")
 
@@ -198,8 +222,6 @@ def alignment_from_wave(path, prefix):
     return time, align
 
 def loss_plot(prefix): 
-    path = "../data/"
-
     xpi = np.loadtxt(f'{path}/{prefix}_xpi.dat', skiprows=1, delimiter="\t")
     bsigma = np.loadtxt(f'{path}/{prefix}_bsigma.dat', skiprows=1, delimiter="\t")
 
@@ -216,4 +238,4 @@ def loss_plot(prefix):
     return fig, ax
 
 if __name__ == "__main__":
-    angular_animation("standard_1_1")
+    show_potential("isotropic")

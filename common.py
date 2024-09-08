@@ -19,6 +19,7 @@ EV = 0.03675
 PM = 0.0188973
 GHZ = 1.51983e-7
 KCAL_MOL = 0.043 * EV
+PS = 41341.374
 
 Floating = NDArray[np.floating] | float
 
@@ -26,10 +27,11 @@ class AnimationConfig(Flag):
     No = 0
     Angular = 1
     Polar = 2
-    Wave = 4
-    Momentum = 8
-    AngProjection = 16
-    All = 31
+    Distance = 4
+    Wave = 8
+    Momentum = 16
+    AngProjection = 32
+    All = 63
 
 def centrifugal(r_points, j_tot: int, omega: int, mass_u: float):
     return (j_tot * (j_tot + 1) - 2 * omega * omega) / (2 * mass_u * U * np.power(r_points, 2))
