@@ -13,7 +13,7 @@ def calc_partial_cross_sections(mass, energy, j_init, omega_init, Js, losses):
     return np.pi / (2 * energy * mass) * losses_eff * (omega_init + 1) / (2 * j_init + 1)
 
 def calc_cross_section(Js, partial_cross_sections):
-    return np.trapz(partial_cross_sections, Js)
+    return np.trapezoid(partial_cross_sections, Js)
 
 def calc_reaction_rate(mass, energy, cross_section):
     convertion = (5.29177210903)**3 * 10**(-10) / 2.4188843265
@@ -54,22 +54,21 @@ def get_reaction_rate_dependence(prefix, changing_parameter, is_energy_parameter
             shutil.copy(f"{path}/losses_3700_1_0.dat", f"{path}/{prefix}_{parameter}_1_0.dat")
             shutil.copy(f"{path}/losses_3700_1_1.dat", f"{path}/{prefix}_{parameter}_1_1.dat")
 
-        losses = read_losses(f"{path}/{prefix}_{parameter}_{0}_{0}.dat")
+        losses = read_losses(f"{path}/{prefix}_{parameter}_0_0.dat")
         Js = losses[:, 0]
         BSigma_losses = losses[:, 1]
         XPi_losses = losses[:, 2]
         xpi0.append(get_reaction_rate(mass, energy, 0, 0, Js, XPi_losses))
         bsigma0.append(get_reaction_rate(mass, energy, 0, 0, Js, BSigma_losses))
 
-        losses = read_losses(f"{path}/{prefix}_{parameter}_{1}_{0}.dat")
+        losses = read_losses(f"{path}/{prefix}_{parameter}_1_0.dat")
         Js = losses[:, 0]
         BSigma_losses = losses[:, 1]
         XPi_losses = losses[:, 2]
         xpi10.append(get_reaction_rate(mass, energy, 1, 0, Js, XPi_losses))
         bsigma10.append(get_reaction_rate(mass, energy, 1, 0, Js, BSigma_losses))
 
-
-        losses = read_losses(f"{path}/{prefix}_{parameter}_{1}_{1}.dat")
+        losses = read_losses(f"{path}/{prefix}_{parameter}_1_1.dat")
         Js = losses[:, 0]
         BSigma_losses = losses[:, 1]
         XPi_losses = losses[:, 2]
@@ -87,8 +86,8 @@ def get_reaction_rate_dependence(prefix, changing_parameter, is_energy_parameter
 
 def plot_reaction_rate_dependence_0(xlabel, parameters, xpi0, bsigma0, position = None):
     fig, ax = utility.plot()
-    ax.plot(parameters, xpi0, "o-", label="$X \Pi$, j=0")
-    ax.plot(parameters, bsigma0, "o-", label="$A + B$, j=0")
+    ax.plot(parameters, xpi0, "o-", label=r"$X \Pi$, j=0")
+    ax.plot(parameters, bsigma0, "o-", label=r"$A + B$, j=0")
 
     if position is not None:
         ax.legend(loc=position)
@@ -102,13 +101,13 @@ def plot_reaction_rate_dependence_0(xlabel, parameters, xpi0, bsigma0, position 
 
 def plot_reaction_rate_dependence_1(xlabel, parameters, xpi10, xpi11, bsigma10, bsigma11, position = None):
     fig, ax = utility.plot()
-    ax.plot(parameters, bsigma10 + bsigma11, "o-", label="$A + B, j=1$", color="blue")
-    ax.plot(parameters, bsigma10, "o-", label="$A + B, j=1, \Omega=0$", color="steelblue")
-    ax.plot(parameters, bsigma11, "o-", label="$A + B, j=1, |\Omega|=1$", color="deepskyblue")
+    ax.plot(parameters, bsigma10 + bsigma11, "o-", label=r"$A + B, j=1$", color="blue")
+    ax.plot(parameters, bsigma10, "o-", label=r"$A + B, j=1, \Omega=0$", color="steelblue")
+    ax.plot(parameters, bsigma11, "o-", label=r"$A + B, j=1, |\Omega|=1$", color="deepskyblue")
 
-    ax.plot(parameters, xpi10 + xpi11, "o-", label="$X \Pi, j=1$", color = "red")
-    ax.plot(parameters, xpi10, "o-", label="$X \Pi, j=1, \Omega=0$", color="darkorange")
-    ax.plot(parameters, xpi11, "o-", label="$X \Pi, j=1, |\Omega|=1$", color="orange")
+    ax.plot(parameters, xpi10 + xpi11, "o-", label=r"$X \Pi, j=1$", color = "red")
+    ax.plot(parameters, xpi10, "o-", label=r"$X \Pi, j=1, \Omega=0$", color="darkorange")
+    ax.plot(parameters, xpi11, "o-", label=r"$X \Pi, j=1, |\Omega|=1$", color="orange")
 
     if position is not None:
         ax.legend(loc=position)
@@ -124,13 +123,13 @@ def plot_ratio_dependence(xlabel, parameters, xpi0, xpi10, xpi11, bsigma0, bsigm
     fig, ax = utility.plot()
     ax.plot(parameters, (bsigma10 + bsigma11) / bsigma0, "o-", label="$A + B$", color="blue")
     if sub_ratios:
-        ax.plot(parameters, bsigma10 / bsigma0, "o-", label="$A + B, \Omega=0$", color="steelblue")
-        ax.plot(parameters, bsigma11 / bsigma0, "o-", label="$A + B, |\Omega|=1$", color="deepskyblue")
+        ax.plot(parameters, bsigma10 / bsigma0, "o-", label=r"$A + B, \Omega=0$", color="steelblue")
+        ax.plot(parameters, bsigma11 / bsigma0, "o-", label=r"$A + B, |\Omega|=1$", color="deepskyblue")
 
-    ax.plot(parameters, (xpi10 + xpi11) / xpi0, "o-", label="$X \Pi$", color = "red")
+    ax.plot(parameters, (xpi10 + xpi11) / xpi0, "o-", label=r"$X \Pi$", color = "red")
     if sub_ratios:
-        ax.plot(parameters, xpi10 / xpi0, "o-", label="$X \Pi, \Omega=0$", color="darkorange")
-        ax.plot(parameters, xpi11 / xpi0, "o-", label="$X \Pi, |\Omega|=1$", color="orange")
+        ax.plot(parameters, xpi10 / xpi0, "o-", label=r"$X \Pi, \Omega=0$", color="darkorange")
+        ax.plot(parameters, xpi11 / xpi0, "o-", label=r"$X \Pi, |\Omega|=1$", color="orange")
 
     if position is not None:
         ax.legend(loc=position)

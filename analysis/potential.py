@@ -30,10 +30,12 @@ def same_grids(r_grid: Grid, polar_grid: Grid, retrived_grids) -> bool:
 def save_potential(path: str, filename: str, r_grid: Grid, polar_grid: Grid, kx, ky, is_gamma: bool):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    r_grid = np.array(r_grid.points())
-    polar_grid = np.array(polar_grid.points())
+    r_grid = np.array(r_grid.points()) # type: ignore
+    polar_grid = np.array(polar_grid.points()) # type: ignore
 
-    return potential_to_npy(path, filename, r_grid, polar_grid, lambda x: np.sqrt(x), lambda x: x**2, kx=kx, ky=ky) if is_gamma else potential_to_npy(path, filename, r_grid, polar_grid, kx=kx, ky=ky)
+    return potential_to_npy(path, filename, r_grid, polar_grid, lambda x: np.sqrt(x), lambda x: x**2, kx=kx, ky=ky) \
+        if is_gamma else \
+            potential_to_npy(path, filename, r_grid, polar_grid, kx=kx, ky=ky)
 
 def potential_to_npy(path, filename, r_grid, theta_grid, transformation = None, inverse_transformation = None, kx=3, ky=3):
     thetas, rs, V_values = load_from_file(path, filename)
@@ -46,11 +48,13 @@ def potential_to_npy(path, filename, r_grid, theta_grid, transformation = None, 
         rs_full = rs_extended_0 + rs + rs_extended_infty
         V_values[i] = V_extended_0 + V_values[i] + V_extended_infty
 
-    V_values_np = np.array(V_values).T
+    V_inv = (np.array(V_values).T)[::-1, :]
+    rs_full_inv = (1 / np.array(rs_full))[::-1]
 
-    interpolation = interp.RectBivariateSpline(rs_full, thetas, V_values_np if transformation == None else transformation(V_values_np), kx=kx, ky=ky, s=0)
+    interpolation = interp.RectBivariateSpline(rs_full_inv, thetas, V_inv if transformation == None else transformation(V_inv), kx=kx, ky=ky)
 
-    V_grid = interpolation(r_grid, theta_grid)
+    V_grid_inv = interpolation((1 / r_grid)[::-1], theta_grid)
+    V_grid = V_grid_inv[::-1, :]
 
     if transformation != None and inverse_transformation == None:
         raise Exception("inverse_transformation must be specified if transformation is specified")
@@ -96,7 +100,7 @@ def load_from_file(path, filename):
     
     return thetas, rs, V_values
 
-def extrapolate_to_zero(rs, V_values, max_val=1000):
+def extrapolate_to_zero(rs, V_values, max_val=10000):
     dr = rs[1] - rs[0]
     dVRatio = V_values[0] / V_values[1]
     dVRatio *= 1.005
@@ -105,13 +109,14 @@ def extrapolate_to_zero(rs, V_values, max_val=1000):
     V_extended = [V_values[0] * dVRatio]
 
     dumping = 0
-    while rs_extended[-1] > 0:
+    while rs_extended[-1] > dr:
         if V_extended[-1] >= max_val:
             V_extended[-1] = max_val + 1000 * np.sqrt(dumping)
             dVRatio = 1
             dumping += 1
         else:
             dVRatio *= 1.005
+
         rs_extended.append(rs_extended[-1] - dr)
         V_extended.append(V_extended[-1] * dVRatio)
 
@@ -129,3 +134,25 @@ def extrapolate_to_infinity(rs, V_values, max_distance = 60):
         V_extended.append(0.0)
 
     return r_extended, V_extended
+
+
+if __name__ == "__main__":
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from scipy.special import roots_legendre
+    import utility
+    from potential import *
+    from split_op import Grid
+    from potential import cm_inv
+
+    r_grid = Grid.linear_continuos("r", 50 / 1024, 50, 300, 0)
+    r_points = r_grid.points()
+
+    x, weights = roots_legendre(100)
+    polar_points = np.flip(np.arccos(x))
+    weights = np.flip(weights)
+
+    polar_grid = Grid.custom("polar", polar_points, weights, 1)
+
+    path = "potentials/"
+    V_grid = load_potential(path, "potential.dat", r_grid, polar_grid, kx=5, ky=5, is_gamma=False, force_reload=True)
