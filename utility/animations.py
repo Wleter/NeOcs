@@ -1,97 +1,121 @@
+from dataclasses import dataclass
 from matplotlib import animation
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import roots_legendre
+from .plotting import wave_into_polar
 
-path = "../data"
-ps = 41341.374
+@dataclass
+class Animator:
+    path: str
+    file_prefix: str
 
-def wave_animation(prefix):
-    wave = np.load(f'{path}/{prefix}_wave_animation.npy')
-    r = np.load(f'{path}/{prefix}_wave_animation_x_grid.npy')
-    theta = np.load(f'{path}/{prefix}_wave_animation_y_grid.npy')
+    save_path: str
+    save_prefix: str
 
-    theta = np.concatenate(([0], theta))
-    wave = np.concatenate((wave[:, 0:1], wave), axis=1)
+    def wave_2d_animation(self, fps: int = 30):
+        wave = np.load(f'{self.path}/{self.file_prefix}_wave_animation.npy')
+        r = np.load(f'{self.path}/{self.file_prefix}_wave_animation_x_grid.npy')
+        polar = np.load(f'{self.path}/{self.file_prefix}_wave_animation_y_grid.npy')
 
-    theta = np.concatenate((theta, np.flip(-theta)))
-    wave = np.concatenate((wave, np.flip(wave, axis=1)), axis=1)
+        polar, wave = wave_into_polar(polar, wave)
 
-    fig, ax = plt.subplots(subplot_kw=dict(projection='polar'))
+        fig, ax = plt.subplots(subplot_kw=dict(projection='polar'))
+        def animate(i: int):
+            ax.clear()
+            ax.contourf(polar, r, wave[:, :, i], cmap='hot', levels=50)
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.grid(False)
+            
+            return []
 
-    def animate(i):
-        ax.clear()
-        ax.contourf(theta, r, wave[:, :, i], cmap='hot', levels=50)
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.grid(False)
-    anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[2], blit=False)
-    return anim
+        anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[2], blit=False)
 
-def angular_animation(prefix): 
-    wave = np.load(f'{path}/{prefix}_angular_animation.npy')
-    l = np.load(f'{path}/{prefix}_angular_animation_angular_momentum_grid.npy')
+        filename = f"{self.save_path}/{self.save_prefix}_wave_animation.gif"
+        anim.save(filename, writer="pillow", fps=fps)
+        print("saved animation as", filename)
+    
+    def angular_animation(self, fps: int = 30):
+        wave = np.load(f'{self.path}/{self.file_prefix}_angular_animation.npy')
+        l = np.load(f'{self.path}/{self.file_prefix}_angular_animation_angular_momentum_grid.npy')
 
-    fig, ax = plt.subplots()
+        fig, ax = plt.subplots()
 
-    def animate(i):
-        ax.clear()
-        ax.plot(l, wave[:, i])
+        def animate(i):
+            ax.clear()
+            ax.plot(l, wave[:, i])
 
-        ax.set_xlabel('Angular momentum j')
-        ax.set_ylabel('Wave function density')
+            ax.set_xlabel('Angular momentum j')
+            ax.set_ylabel('Wave function density')
 
-    anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
-    return anim
+            return []
 
-def polar_animation(prefix): 
-    wave = np.load(f'{path}/{prefix}_polar_animation.npy')
-    l = np.load(f'{path}/{prefix}_polar_animation_theta_grid.npy')
+        anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
+        filename = f"{self.save_path}/{self.save_prefix}_angular_animation.gif"
+        anim.save(filename, writer="pillow", fps=fps)
+        print("saved animation as", filename)
 
-    fig, ax = plt.subplots()
+    def polar_animation(self, fps: int = 30): 
+        wave = np.load(f'{self.path}/{self.file_prefix}_polar_animation.npy')
+        l = np.load(f'{self.path}/{self.file_prefix}_polar_animation_theta_grid.npy')
 
-    def animate(i):
-        ax.clear()
-        ax.plot(l, wave[:, i])
+        fig, ax = plt.subplots()
 
-        ax.set_xlabel('Angle [rad]')
-        ax.set_ylabel('Wave function density')
+        def animate(i):
+            ax.clear()
+            ax.plot(l, wave[:, i])
 
-    anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
-    return anim
+            ax.set_xlabel('Angle [rad]')
+            ax.set_ylabel('Wave function density')
 
-def omega_animation(prefix):
-    wave = np.load(f'{path}/{prefix}_omega_animation.npy')
-    omega = np.load(f'{path}/{prefix}_omega_animation_omega_grid.npy')
+            return []
 
-    fig, ax = plt.subplots()
+        anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
+        filename = f"{self.save_path}/{self.save_prefix}_polar_animation.gif"
+        anim.save(filename, writer="pillow", fps=fps)
+        print("saved animation as", filename)
 
-    def animate(i):
-        ax.clear()
-        ax.plot(omega, wave[:, i])
+    def omega_animation(self, fps: int = 30):
+        wave = np.load(f'{self.path}/{self.file_prefix}_omega_animation.npy')
+        omega = np.load(f'{self.path}/{self.file_prefix}_omega_animation_omega_grid.npy')
 
-        ax.set_xlabel('Angular momentum projection $\\Omega$')
-        ax.set_ylabel('Wave function density')
-        ax.set_ylim(0, 1)
+        fig, ax = plt.subplots()
 
-    anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
-    return anim
+        def animate(i):
+            ax.clear()
+            ax.plot(omega, wave[:, i])
 
-def distance_animation(prefix): 
-    wave = np.load(f'{path}/{prefix}_distance_animation.npy')
-    distance = np.load(f'{path}/{prefix}_distance_animation_r_grid.npy')
+            ax.set_xlabel(r'Angular momentum projection $\Omega$')
+            ax.set_ylabel('Wave function density')
+            ax.set_ylim(0, 1)
 
-    fig, ax = plt.subplots()
+            return []
 
-    def animate(i):
-        ax.clear()
-        ax.plot(distance, wave[:, i])
+        anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
+        filename = f"{self.save_path}/{self.save_prefix}_omega_animation.gif"
+        anim.save(filename, writer="pillow", fps=fps)
+        print("saved animation as", filename)
 
-        ax.set_xlabel('Distance r [bohr]')
-        ax.set_ylabel('Wave function density')
+    def distance_animation(self, fps: int = 30): 
+        wave = np.load(f'{self.path}/{self.file_prefix}_distance_animation.npy')
+        distance = np.load(f'{self.path}/{self.file_prefix}_distance_animation_r_grid.npy')
 
-    anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
-    return anim
+        fig, ax = plt.subplots()
+
+        def animate(i):
+            ax.clear()
+            ax.plot(distance, wave[:, i])
+
+            ax.set_xlabel('Distance r [bohr]')
+            ax.set_ylabel('Wave function density')
+
+            return []
+
+        anim = animation.FuncAnimation(fig, animate, interval=60, frames=wave.shape[1], blit=False)
+        filename = f"{self.save_path}/{self.save_prefix}_distance_animation.gif"
+        anim.save(filename, writer="pillow", fps=fps)
+        print("saved animation as", filename)
 
 def alignement(prefix): 
     wave = np.load(f'{path}/{prefix}_polar_animation.npy')
@@ -236,6 +260,3 @@ def loss_plot(prefix):
     ax.legend()
 
     return fig, ax
-
-if __name__ == "__main__":
-    show_potential("isotropic")

@@ -1,32 +1,64 @@
+from dataclasses import dataclass
+from enum import Enum
 import numpy as np
 import matplotlib.pyplot as plt
 import shutil
 import os
-import utility
+from .units import KELVIN
+from .my_types import FloatNDArray
 
-def read_losses(filename):
-    return np.loadtxt(filename, skiprows=1)
+class Ionization(Enum):
+    Penning = 1
+    Dissociative = 2
 
-def calc_partial_cross_sections(mass, energy, j_init, omega_init, Js, losses):
-    losses_eff = np.array(list(map(lambda J, P: (2*J + 1) * P, Js, losses)))
+    def reaction_name(self) -> str:
+        return "PI" if self.value == 1 else "DI"
 
-    return np.pi / (2 * energy * mass) * losses_eff * (omega_init + 1) / (2 * j_init + 1)
+@dataclass
+class Reaction:
+    ionization_type: Ionization
+    partial_cross_sections: FloatNDArray
+    cross_section: float
+    reaction_rate: float
 
-def calc_cross_section(Js, partial_cross_sections):
-    return np.trapezoid(partial_cross_sections, Js)
+@dataclass
+class Losses:
+    j_tot_values: FloatNDArray
+    dissociative_losses: FloatNDArray
+    penning_losses: FloatNDArray
 
-def calc_reaction_rate(mass, energy, cross_section):
-    convertion = (5.29177210903)**3 * 10**(-10) / 2.4188843265
-    return np.sqrt((2 * energy / mass)) * cross_section * convertion
+    j_init: int
+    omega_init: int | None
 
-def get_reaction_rate(mass, energy, j_init, omega_init, Js, losses):
-    partial_cross_sections = calc_partial_cross_sections(mass, energy, j_init, omega_init, Js, losses)
-    cross_section = calc_cross_section(Js, partial_cross_sections)
+    def __init__(self, path: str, filename: str, j_init: int, omega_init: int | None):
+        values = np.loadtxt(path + filename, skiprows=1)
 
-    return calc_reaction_rate(mass, energy, cross_section)
+        self.j_tot_values = values[:, 0]
+        self.dissociative_losses = values[:, 1]
+        self.penning_losses = values[:, 2]
 
-def get_reaction_rate_dependence(prefix, changing_parameter, is_energy_parameter = False, is_mass_factor_parameter = False, identity = 1.0):
-    mass = 27535.24841189485
+        self.j_init = j_init
+        self.omega_init = omega_init
+
+    def get_reaction(self, ionization_type: Ionization, energy: float = 3700 * KELVIN, mass: float = 27535.2484) -> Reaction:
+        match ionization_type:
+            case Ionization.Penning:
+                losses = self.penning_losses
+            case Ionization.Dissociative:
+                losses = self.dissociative_losses
+        
+        g_factor = 1 if self.omega_init == 0 or self.omega_init is None else 2
+        
+        losses_effective = (2 * self.j_tot_values + 1) * losses
+        partial_cross_sections = np.pi / (2 * energy * mass) * losses_effective * g_factor / (2 * self.j_init + 1)
+        cross_section: float = np.trapezoid(partial_cross_sections, self.j_tot_values) # type: ignore
+
+        conversion = (5.29177210903)**3 * 10**(-10) / 2.4188843265
+        reaction_rate = np.sqrt((2 * energy / mass)) * cross_section * conversion
+
+        return Reaction(ionization_type, partial_cross_sections, cross_section, reaction_rate)
+
+def get_reaction_rate_dependence(prefix, changing_parameter, is_energy_parameter = False, is_mass_scaling = False, identity = 1.0):
     energy_kelvin = 3700
     energy = energy_kelvin * 3.1668105e-6
     path = "../data/"
@@ -42,9 +74,9 @@ def get_reaction_rate_dependence(prefix, changing_parameter, is_energy_parameter
 
     for parameter in changing_parameter:
         if is_energy_parameter:
-            energy = parameter * 3.1668105e-6
-        if is_mass_factor_parameter:
-            mass = parameter * 27535.24841189485
+            energy = parameter * KELVIN
+        if is_mass_scaling:
+            mass = parameter * 27535.2484
 
         if parameter == identity and (os.path.exists(f"{path}/{prefix}_{parameter}_0_0.dat") == False
                                 or os.path.exists(f"{path}/{prefix}_{parameter}_1_0.dat") == False
