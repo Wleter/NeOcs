@@ -6,6 +6,7 @@ from split_op import Grid
 import os
 from .my_types import Floating, FloatNDArray
 from .units import ANGS, KCAL_MOL, DEB
+from scipy.interpolate import CubicSpline
 
 @dataclass
 class PotentialArray:
@@ -54,7 +55,7 @@ class PotentialRetriever:
         self._radial = np.array(r_grid.points())
         self._polar = np.array(polar_grid.points())
 
-    def load_interpolated(self, filename: str, is_gamma: bool, kx: int = 3, ky: int = 3) -> PotentialArray:
+    def load_interpolated(self, filename: str, is_gamma: bool) -> PotentialArray:
         grids_filepath = f"{self._path}{filename}_grid.npy"
         potential_filepath = f"{self._path}{filename}.npy"
 
@@ -64,13 +65,13 @@ class PotentialRetriever:
             if self._same_grids(grids):
                 return PotentialArray(self._radial, self._polar, np.load(potential_filepath))
         
-        return self.reload_interpolated(filename, is_gamma, kx, ky)
+        return self.reload_interpolated(filename, is_gamma)
 
     def _same_grids(self, retrived_grids: FloatNDArray) -> bool:
         return retrived_grids[0] != self._radial[0] or retrived_grids[1] != self._radial[-1] or retrived_grids[2] != len(self._radial) \
             or retrived_grids[3] != self._polar[0] or retrived_grids[4] != self._polar[-1] or retrived_grids[5] != len(self._polar) 
 
-    def reload_interpolated(self, filename: str, is_gamma: bool, kx: int = 3, ky: int = 3) -> PotentialArray:
+    def reload_interpolated(self, filename: str, is_gamma: bool) -> PotentialArray:
         potential_data = load_from_file(self._path, filename)
 
         radial_ext0, values_ext0 = self._extrapolate_to_zero(potential_data)
@@ -80,16 +81,27 @@ class PotentialRetriever:
         values_ext = np.concat((values_ext0, potential_data.values, values_ext_inf), axis=0)
 
         if is_gamma:
-            values_ext = np.sqrt(values_ext)
+            values_ext = np.power(values_ext, 1/16)
 
         values_inv = values_ext[::-1, :]
         radial_inv = (1 / radial_ext)[::-1]
 
-        interpolation = interp.RectBivariateSpline(radial_inv, potential_data.polar, values_inv, kx=kx, ky=ky)
+        interpolation_polar = np.zeros((radial_ext.shape[0], self._polar.shape[0]))
+        for i in range(radial_ext.shape[0]):
+            interpolation = CubicSpline(potential_data.polar, values_inv[i, :], bc_type="clamped")
 
-        values_grid = interpolation((1 / self._radial)[::-1], self._polar)[::-1, :]
+            interpolation_polar[i, :] = interpolation(self._polar)
+
+        values_grid = np.zeros((self._radial.shape[0], self._polar.shape[0]))
+        for i in range(self._polar.shape[0]):
+            interpolation = CubicSpline(radial_inv, interpolation_polar[:, i])
+
+            values_grid[:, i] = interpolation(1 / self._radial)
+
+        values_grid = values_grid[::-1, :]
+
         if is_gamma:
-            values_grid = values_grid ** 2
+            values_grid = np.power(values_grid, 16)
 
         np.save(self._path + filename.split(".")[0] + ".npy", values_grid)
         np.save(self._path + filename.split(".")[0] + "_grid.npy", [
@@ -99,7 +111,7 @@ class PotentialRetriever:
 
         return PotentialArray(self._radial, self._polar, values_grid)
     
-    def get_interpolation(self, filename: str, transform: Optional[Callable[[FloatNDArray], FloatNDArray]], kx: int = 3, ky: int = 3) -> interp.RectBivariateSpline:
+    def get_extended(self, filename: str) -> PotentialArray:
         potential_data = load_from_file(self._path, filename)
 
         radial_ext0, values_ext0 = self._extrapolate_to_zero(potential_data)
@@ -108,13 +120,7 @@ class PotentialRetriever:
         radial_ext = np.concat((radial_ext0, potential_data.radial, radial_ext_inf))
         values_ext = np.concat((values_ext0, potential_data.values, values_ext_inf), axis=0)
 
-        if transform is not None:
-            values_ext = transform(values_ext)
-
-        values_inv = values_ext[::-1, :]
-        radial_inv = (1 / radial_ext)[::-1]
-
-        return interp.RectBivariateSpline(radial_inv, potential_data.polar, values_inv, kx=kx, ky=ky)
+        return PotentialArray(radial_ext, potential_data.polar, values_ext)
 
 
     def _extrapolate_to_zero(self, potential_data: PotentialArray, max_val: float = 10000) -> tuple[FloatNDArray, FloatNDArray]:
