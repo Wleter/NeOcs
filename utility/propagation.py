@@ -1,6 +1,6 @@
 from enum import Flag
-from my_types import Floating
-from units import U
+from .my_types import Floating
+from .units import U
 
 DATA_PATH = "../data/"
 

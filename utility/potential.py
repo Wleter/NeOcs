@@ -7,6 +7,7 @@ import os
 from .my_types import Floating, FloatNDArray
 from .units import ANGS, KCAL_MOL, DEB
 from scipy.interpolate import CubicSpline
+from math import isnan
 
 @dataclass
 class PotentialArray:
@@ -49,13 +50,13 @@ def load_from_file(path: str, filename: str) -> PotentialArray:
     
     return PotentialArray(np.array(radial), np.array(polar), np.array(V_values).T)
 
-class PotentialRetriever:
+class GammaRetriever:
     def __init__(self, r_grid: Grid, polar_grid: Grid, path: str):
         self._path = path
         self._radial = np.array(r_grid.points())
         self._polar = np.array(polar_grid.points())
 
-    def load_interpolated(self, filename: str, is_gamma: bool) -> PotentialArray:
+    def load_interpolated(self, filename: str) -> PotentialArray:
         grids_filepath = f"{self._path}{filename}_grid.npy"
         potential_filepath = f"{self._path}{filename}.npy"
 
@@ -65,13 +66,13 @@ class PotentialRetriever:
             if self._same_grids(grids):
                 return PotentialArray(self._radial, self._polar, np.load(potential_filepath))
         
-        return self.reload_interpolated(filename, is_gamma)
+        return self.reload_interpolated(filename)
 
     def _same_grids(self, retrived_grids: FloatNDArray) -> bool:
         return retrived_grids[0] != self._radial[0] or retrived_grids[1] != self._radial[-1] or retrived_grids[2] != len(self._radial) \
             or retrived_grids[3] != self._polar[0] or retrived_grids[4] != self._polar[-1] or retrived_grids[5] != len(self._polar) 
 
-    def reload_interpolated(self, filename: str, is_gamma: bool) -> PotentialArray:
+    def reload_interpolated(self, filename: str) -> PotentialArray:
         potential_data = load_from_file(self._path, filename)
 
         radial_ext0, values_ext0 = self._extrapolate_to_zero(potential_data)
@@ -80,14 +81,13 @@ class PotentialRetriever:
         radial_ext = np.concat((radial_ext0, potential_data.radial, radial_ext_inf))
         values_ext = np.concat((values_ext0, potential_data.values, values_ext_inf), axis=0)
 
-        if is_gamma:
-            values_ext = np.power(values_ext, 1/16)
+        values_ext = np.power(values_ext, 1/16)
 
-        values_inv = values_ext[::-1, :]
-        radial_inv = (1 / radial_ext)[::-1]
+        values_inv = values_ext#[::-1, :]
+        radial_inv = radial_ext#(1 / radial_ext)[::-1]
 
-        interpolation_polar = np.zeros((radial_ext.shape[0], self._polar.shape[0]))
-        for i in range(radial_ext.shape[0]):
+        interpolation_polar = np.zeros((radial_inv.shape[0], self._polar.shape[0]))
+        for i in range(radial_inv.shape[0]):
             interpolation = CubicSpline(potential_data.polar, values_inv[i, :], bc_type="clamped")
 
             interpolation_polar[i, :] = interpolation(self._polar)
@@ -96,12 +96,9 @@ class PotentialRetriever:
         for i in range(self._polar.shape[0]):
             interpolation = CubicSpline(radial_inv, interpolation_polar[:, i])
 
-            values_grid[:, i] = interpolation(1 / self._radial)
+            values_grid[:, i] = interpolation(self._radial)
 
-        values_grid = values_grid[::-1, :]
-
-        if is_gamma:
-            values_grid = np.power(values_grid, 16)
+        values_grid = np.power(values_grid, 16)
 
         np.save(self._path + filename.split(".")[0] + ".npy", values_grid)
         np.save(self._path + filename.split(".")[0] + "_grid.npy", [
@@ -123,29 +120,35 @@ class PotentialRetriever:
         return PotentialArray(radial_ext, potential_data.polar, values_ext)
 
 
-    def _extrapolate_to_zero(self, potential_data: PotentialArray, max_val: float = 10000) -> tuple[FloatNDArray, FloatNDArray]:
+    def _extrapolate_to_zero(self, potential_data: PotentialArray, max_val: float = 1) -> tuple[FloatNDArray, FloatNDArray]:
         dr = potential_data.radial[1] - potential_data.radial[0]
 
         radial_ext = []
         values = []
         for angle_i in range(len(potential_data.polar)):
-            values_ratio = potential_data.values[0, angle_i] / potential_data.values[1, angle_i]
-            values_ratio *= 1.005
+            values_ratio = potential_data.values[0, angle_i] / potential_data.values[4, angle_i]
+            radial_ratio = potential_data.radial[0] / potential_data.radial[4]
+
+            exponent = np.log(values_ratio) / np.log(radial_ratio)
+            prefactor = potential_data.values[0, angle_i] / np.power(potential_data.radial[0], exponent)
         
             radial_ext = [potential_data.radial[0] - dr]
-            values_ext = [potential_data.values[0, angle_i] * values_ratio]
+            values_ext = [prefactor * np.power(potential_data.radial[0] - dr, exponent)]
 
             dumping = 0
             while radial_ext[-1] > dr:
                 if values_ext[-1] >= max_val:
-                    values_ext[-1] = max_val + 1000 * np.sqrt(dumping)
-                    values_ratio = 1
+                    values_ext[-1] = max_val + 0.1 * np.sqrt(dumping)
                     dumping += 1
+                    radial_ext.append(radial_ext[-1] - dr)
+                    values_ext.append(values_ext[-1])
                 else:
-                    values_ratio *= 1.005
-            
-                radial_ext.append(radial_ext[-1] - dr)
-                values_ext.append(values_ext[-1] * values_ratio)
+                    radial_ext.append(radial_ext[-1] - dr)
+                    value = prefactor * np.power(radial_ext[-1] - dr, exponent)
+                    if isnan(value):
+                        value = max_val
+
+                    values_ext.append(value)
 
             radial_ext.reverse()
             values_ext.reverse()
