@@ -1,13 +1,17 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Protocol
 import numpy as np
-import scipy.interpolate as interp
 from split_op import Grid
 import os
 from .my_types import Floating, FloatNDArray
-from .units import ANGS, KCAL_MOL, DEB
+from .units import ANGS, CM_INV, KCAL_MOL, DEB
 from scipy.interpolate import CubicSpline
 from math import isnan
+import matplotlib.pyplot as plt
+
+class Potential(Protocol):
+    def value(self, r: Floating, theta: Floating) -> Floating:
+        ...
 
 @dataclass
 class PotentialArray:
@@ -26,7 +30,7 @@ def load_from_file(path: str, filename: str) -> PotentialArray:
     i = 0
     V_theta = []
 
-    with open(path + filename) as file:
+    with open(f"{path}/{filename}") as file:
         contents = file.readlines()
         for line in contents:
             if line.startswith("# theta ="):
@@ -57,8 +61,8 @@ class GammaRetriever:
         self._polar = np.array(polar_grid.points())
 
     def load_interpolated(self, filename: str) -> PotentialArray:
-        grids_filepath = f"{self._path}{filename}_grid.npy"
-        potential_filepath = f"{self._path}{filename}.npy"
+        grids_filepath = f"{self._path}/{filename}_grid.npy"
+        potential_filepath = f"{self._path}/{filename}.npy"
 
         if os.path.isfile(grids_filepath) and os.path.isfile(potential_filepath):
             grids: FloatNDArray = np.load(grids_filepath)
@@ -100,8 +104,8 @@ class GammaRetriever:
 
         values_grid = np.power(values_grid, 16)
 
-        np.save(self._path + filename.split(".")[0] + ".npy", values_grid)
-        np.save(self._path + filename.split(".")[0] + "_grid.npy", [
+        np.save(f"{self._path}/{filename.split(".")[0]}.npy", values_grid)
+        np.save(f"{self._path}/{filename.split(".")[0]}_grid.npy", [
             self._radial[0], self._radial[-1], self._radial.shape[0],
             self._polar[0], self._polar[-1], self._polar.shape[0],
         ])
@@ -236,3 +240,16 @@ class ForceField:
         pot_dip = -self.alpha * (1 + 3 * cos_theta_shifted ** 2) / (2 * r_c ** 6)
 
         return pot_o + pot_c + pot_s + pot_dip
+
+    def save(self, save_path: str, filename: str):
+        r = np.linspace(5, 20, 300)
+        theta = np.linspace(0, np.pi, 100)
+        theta_mesh, r_mesh = np.meshgrid(theta, r, indexing="ij")
+
+        potential_array = self.value(r_mesh, theta_mesh) / CM_INV
+        potential_array = np.clip(potential_array, -np.inf, 4000)
+
+        fig, ax = plt.subplots()
+        CS = ax.contourf(r, theta, potential_array, levels = 100)
+        fig.colorbar(CS)
+        fig.savefig(f"{save_path}/{filename}.pdf")

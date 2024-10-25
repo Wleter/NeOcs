@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import Callable, Optional
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 import numpy as np
-import matplotlib.pyplot as plt
-import shutil
-import os
+
+from .plotting import plot
 from .units import KELVIN
 from .my_types import FloatNDArray
 
@@ -47,7 +49,13 @@ class Losses:
             case Ionization.Dissociative:
                 losses = self.dissociative_losses
         
-        g_factor = 1 if self.omega_init == 0 or self.omega_init is None else 2
+        match self.omega_init:
+            case 0:
+                g_factor = 1
+            case None:
+                g_factor = 2 * self.j_init + 1
+            case _:
+                g_factor = 2
         
         losses_effective = (2 * self.j_tot_values + 1) * losses
         partial_cross_sections = np.pi / (2 * energy * mass) * losses_effective * g_factor / (2 * self.j_init + 1)
@@ -58,116 +66,104 @@ class Losses:
 
         return Reaction(ionization_type, partial_cross_sections, cross_section, reaction_rate)
 
-def get_reaction_rate_dependence(prefix, changing_parameter, is_energy_parameter = False, is_mass_scaling = False, identity = 1.0):
-    energy_kelvin = 3700
-    energy = energy_kelvin * 3.1668105e-6
-    path = "../data/"
+class ParamType(Enum):
+    EnergyKelvin = 0
+    MassScaling = 1
+    Other = 2
 
-    xpi0 = []
-    bsigma0 = []
+@dataclass
+class ReactionDependence:
+    parameters: FloatNDArray
+    path: str
+    ionization_type: Ionization
+    param_type: ParamType = ParamType.Other
 
-    xpi10 = []
-    xpi11 = []
+    unchanged_value: Optional[float] = None
+    unchanged_filename_prefix = "losses_3700"
 
-    bsigma10 = []
-    bsigma11 = []
+    def get_reaction_rates(self, file_pattern: Callable[[float], str], j_init: int, omega_init: int) -> FloatNDArray:
+        rates = []
+        for parameter in self.parameters:
 
-    for parameter in changing_parameter:
-        if is_energy_parameter:
-            energy = parameter * KELVIN
-        if is_mass_scaling:
-            mass = parameter * 27535.2484
+            if parameter != self.unchanged_value:
+                filename = file_pattern(parameter)
+                losses = Losses(self.path, filename, j_init, omega_init)
+            else:
+                losses = Losses(self.path, f"{self.unchanged_filename_prefix}_{j_init}_{omega_init}", j_init, omega_init)
 
-        if parameter == identity and (os.path.exists(f"{path}/{prefix}_{parameter}_0_0.dat") == False
-                                or os.path.exists(f"{path}/{prefix}_{parameter}_1_0.dat") == False
-                                or os.path.exists(f"{path}/{prefix}_{parameter}_1_1.dat") == False):
-            print(f"Copied data from 3700 energy calculation to {prefix}_{parameter}")
-            shutil.copy(f"{path}/losses_3700_0_0.dat", f"{path}/{prefix}_{parameter}_0_0.dat")
-            shutil.copy(f"{path}/losses_3700_1_0.dat", f"{path}/{prefix}_{parameter}_1_0.dat")
-            shutil.copy(f"{path}/losses_3700_1_1.dat", f"{path}/{prefix}_{parameter}_1_1.dat")
 
-        losses = read_losses(f"{path}/{prefix}_{parameter}_0_0.dat")
-        Js = losses[:, 0]
-        BSigma_losses = losses[:, 1]
-        XPi_losses = losses[:, 2]
-        xpi0.append(get_reaction_rate(mass, energy, 0, 0, Js, XPi_losses))
-        bsigma0.append(get_reaction_rate(mass, energy, 0, 0, Js, BSigma_losses))
+            match self.param_type:
+                case ParamType.EnergyKelvin:
+                    reaction = losses.get_reaction(self.ionization_type, energy = parameter * KELVIN)
+                case ParamType.MassScaling:
+                    reaction = losses.get_reaction(self.ionization_type, mass = 27535.2484 * parameter)
+                case ParamType.Other:
+                    reaction = losses.get_reaction(self.ionization_type)
+            rates.append(reaction.reaction_rate)
 
-        losses = read_losses(f"{path}/{prefix}_{parameter}_1_0.dat")
-        Js = losses[:, 0]
-        BSigma_losses = losses[:, 1]
-        XPi_losses = losses[:, 2]
-        xpi10.append(get_reaction_rate(mass, energy, 1, 0, Js, XPi_losses))
-        bsigma10.append(get_reaction_rate(mass, energy, 1, 0, Js, BSigma_losses))
+        return np.array(rates)
+    
+    def plot_ratios(self, file_pattern: Callable[[float, int, int], str], fig_ax: Optional[tuple[Figure, Axes]] = None) -> tuple[Figure, Axes]:
+        if fig_ax is None:
+            fig, ax = plot()
+            ax.set_ylabel("Reaction rate ratio")
+            ax.legend()
+        else:
+            fig, ax = fig_ax
 
-        losses = read_losses(f"{path}/{prefix}_{parameter}_1_1.dat")
-        Js = losses[:, 0]
-        BSigma_losses = losses[:, 1]
-        XPi_losses = losses[:, 2]
-        xpi11.append(get_reaction_rate(mass, energy, 1, 1, Js, XPi_losses))
-        bsigma11.append(get_reaction_rate(mass, energy, 1, 1, Js, BSigma_losses))
+        r00 = self.get_reaction_rates(lambda x: file_pattern(x, 0, 0), 0, 0)
+        r10 = self.get_reaction_rates(lambda x: file_pattern(x, 1, 0), 1, 0)
+        r11 = self.get_reaction_rates(lambda x: file_pattern(x, 1, 1), 1, 1)
 
-    xpi0 = np.array(xpi0)
-    xpi10 = np.array(xpi10)
-    xpi11 = np.array(xpi11)
-    bsigma0 = np.array(bsigma0)
-    bsigma10 = np.array(bsigma10)
-    bsigma11 = np.array(bsigma11)
+        match self.ionization_type:
+            case Ionization.Penning:
+                ax.plot(self.parameters, (r10 + r11) / r00, "o-", label = "PI", color = "red")
+                ax.plot(self.parameters, r10 / r00, "o-", label = r"PI, $\Omega=0$", color = "darkorange")
+                ax.plot(self.parameters, r11 / r00, "o-", label = r"PI, $|\Omega|=1$", color = "orange")
+            case Ionization.Dissociative:
+                ax.plot(self.parameters, (r10 + r11) / r00, "o-", label = "DI", color = "blue")
+                ax.plot(self.parameters, r10 / r00, "o-", label = r"DI, $\Omega=0$", color = "steelblue")
+                ax.plot(self.parameters, r11 / r00, "o-", label = r"DI, $|\Omega|=1$", color = "deepskyblue")
 
-    return xpi0, xpi10, xpi11, bsigma0, bsigma10, bsigma11
+        return fig, ax
+    
+    def plot_j_0(self, file_pattern: Callable[[float], str], fig_ax: Optional[tuple[Figure, Axes]] = None) -> tuple[Figure, Axes]:
+        if fig_ax is None:
+            fig, ax = plot()
+            ax.set_ylabel("Reaction rate [cm$^3$/s]")
+            ax.legend()
+        else:
+            fig, ax = fig_ax
 
-def plot_reaction_rate_dependence_0(xlabel, parameters, xpi0, bsigma0, position = None):
-    fig, ax = utility.plot()
-    ax.plot(parameters, xpi0, "o-", label=r"$X \Pi$, j=0")
-    ax.plot(parameters, bsigma0, "o-", label=r"$A + B$, j=0")
+        r00 = self.get_reaction_rates(file_pattern, 0, 0)
 
-    if position is not None:
-        ax.legend(loc=position)
-    else:
-        ax.legend()
+        match self.ionization_type:
+            case Ionization.Penning:
+                ax.plot(self.parameters, r00, "o-", label = "PI", color = "red")
+            case Ionization.Dissociative:
+                ax.plot(self.parameters, r00, "o-", label = "DI", color = "blue")
 
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel("Reaction rate [cm$^3$/s]")
+        return fig, ax
+    
+    def plot_j_1(self, file_pattern: Callable[[float, int, int], str], fig_ax: Optional[tuple[Figure, Axes]] = None) -> tuple[Figure, Axes]:
+        if fig_ax is None:
+            fig, ax = plot()
+            ax.set_ylabel("Reaction rate [cm$^3$/s]")
+            ax.legend()
+        else:
+            fig, ax = fig_ax
 
-    return fig, ax
+        r10 = self.get_reaction_rates(lambda x: file_pattern(x, 1, 0), 1, 0)
+        r11 = self.get_reaction_rates(lambda x: file_pattern(x, 1, 1), 1, 1)
 
-def plot_reaction_rate_dependence_1(xlabel, parameters, xpi10, xpi11, bsigma10, bsigma11, position = None):
-    fig, ax = utility.plot()
-    ax.plot(parameters, bsigma10 + bsigma11, "o-", label=r"$A + B, j=1$", color="blue")
-    ax.plot(parameters, bsigma10, "o-", label=r"$A + B, j=1, \Omega=0$", color="steelblue")
-    ax.plot(parameters, bsigma11, "o-", label=r"$A + B, j=1, |\Omega|=1$", color="deepskyblue")
+        match self.ionization_type:
+            case Ionization.Penning:
+                ax.plot(self.parameters, r11 + r10, "o-", label = r"PI, $j=1$", color = "red")
+                ax.plot(self.parameters, r10, "o-", label = r"PI, $j=1, \Omega=0$", color = "darkorange")
+                ax.plot(self.parameters, r11, "o-", label = r"PI, $j=1, |\Omega|=1$", color = "orange")
+            case Ionization.Dissociative:
+                ax.plot(self.parameters, r11 + r10, "o-", label = r"DI, $j=1$", color = "blue")
+                ax.plot(self.parameters, r10, "o-", label = r"DI, $j=1, \Omega=0$", color = "steelblue")
+                ax.plot(self.parameters, r11, "o-", label = r"DI, $j=1, |\Omega|=1$", color = "deepskyblue")
 
-    ax.plot(parameters, xpi10 + xpi11, "o-", label=r"$X \Pi, j=1$", color = "red")
-    ax.plot(parameters, xpi10, "o-", label=r"$X \Pi, j=1, \Omega=0$", color="darkorange")
-    ax.plot(parameters, xpi11, "o-", label=r"$X \Pi, j=1, |\Omega|=1$", color="orange")
-
-    if position is not None:
-        ax.legend(loc=position)
-    else:
-        ax.legend()
-        
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel("Reaction rate [cm$^3$/s]")
-
-    return fig, ax
-
-def plot_ratio_dependence(xlabel, parameters, xpi0, xpi10, xpi11, bsigma0, bsigma10, bsigma11, sub_ratios = True, position = None):
-    fig, ax = utility.plot()
-    ax.plot(parameters, (bsigma10 + bsigma11) / bsigma0, "o-", label="$A + B$", color="blue")
-    if sub_ratios:
-        ax.plot(parameters, bsigma10 / bsigma0, "o-", label=r"$A + B, \Omega=0$", color="steelblue")
-        ax.plot(parameters, bsigma11 / bsigma0, "o-", label=r"$A + B, |\Omega|=1$", color="deepskyblue")
-
-    ax.plot(parameters, (xpi10 + xpi11) / xpi0, "o-", label=r"$X \Pi$", color = "red")
-    if sub_ratios:
-        ax.plot(parameters, xpi10 / xpi0, "o-", label=r"$X \Pi, \Omega=0$", color="darkorange")
-        ax.plot(parameters, xpi11 / xpi0, "o-", label=r"$X \Pi, |\Omega|=1$", color="orange")
-
-    if position is not None:
-        ax.legend(loc=position)
-    else:
-        ax.legend()
-
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel("Reaction rate ratio")
-    return fig, ax
+        return fig, ax
