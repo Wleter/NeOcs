@@ -20,7 +20,7 @@ class Animator:
         r = np.load(f'{self.path}/{self.file_prefix}_wave_animation_x_grid.npy')
         polar = np.load(f'{self.path}/{self.file_prefix}_wave_animation_y_grid.npy')
 
-        polar, wave = wave_into_polar(polar, wave)
+        r, polar, wave = wave_into_polar(r, polar, wave)
 
         fig, ax = plt.subplots(subplot_kw=dict(projection='polar'))
         def animate(i: int):

@@ -32,14 +32,16 @@ def into_polar(potential: PotentialArray, value_max: float) -> PotentialArray:
 
     return PotentialArray(radial_mod, polar_mod, values_mod)
 
-def wave_into_polar(polar: FloatNDArray, values: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
+def wave_into_polar(radial: FloatNDArray, polar: FloatNDArray, values: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
+    radial = np.concatenate(([0], radial))
     polar = np.concatenate(([0], polar))
     values = np.concatenate((values[:, 0:1], values), axis=1)
+    values = np.concatenate((np.zeros_like(values[0:1, :]), values), axis=0)
 
     polar = np.concatenate((polar, np.flip(-polar)))
     values = np.concatenate((values, np.flip(values, axis=1)), axis=1)
 
-    return polar, values
+    return radial, polar, values
 
 def loss_plot(path: str, prefix: str): 
     xpi = np.loadtxt(f'{path}/{prefix}_xpi.dat', skiprows=1, delimiter="\t")

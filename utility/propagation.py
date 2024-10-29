@@ -74,6 +74,8 @@ class PropagationConfig:
     polar_no: int = 160
     coriolis_omega_max: int = 0
 
+    im_time = False
+
     animation: AnimationConfig = AnimationConfig.No
     frames: int = 60
 
@@ -124,7 +126,7 @@ class Propagation:
         assert j_tot >= omega_init
 
         ############# grids
-        time_grid = split.TimeGrid(self.config.time_step, self.config.steps_no)
+        time_grid = split.TimeGrid(self.config.time_step, self.config.steps_no, im_time = self.config.im_time)
         r_grid = split.Grid.linear_continuos("r", self.config.r_start, self.config.r_end, self.config.r_no, 0)
         
         polar_points, weights = roots_legendre(self.config.polar_no)
@@ -212,6 +214,9 @@ class Propagation:
         ########## operation stack creation
         operation_stack = split.OperationStack()
 
+        if self.config.im_time:
+            leak_control.add_operation(operation_stack)
+
         potential_with_bsigma_prop.add_operation(operation_stack)
         xpi_gamma_prop.add_operation(operation_stack)
 
@@ -227,8 +232,9 @@ class Propagation:
             polar_saver = split.StateSaver(f"{DATA_PATH}/{self.save_prefix}_polar_animation", time_grid, polar_grid, self.config.frames)
             polar_saver.add_operation(operation_stack)
 
-        dumping_border.add_operation(operation_stack)
-        leak_control.add_operation(operation_stack)
+        if not self.config.im_time:
+            dumping_border.add_operation(operation_stack)
+            leak_control.add_operation(operation_stack)
 
         angular_transformation.add_operation(operation_stack, True)
         if AnimationConfig.Angular in self.config.animation:
@@ -269,7 +275,7 @@ class Propagation:
                 assert j_init >= 1
 
         ############# grids
-        time_grid = split.TimeGrid(self.config.time_step, self.config.steps_no)
+        time_grid = split.TimeGrid(self.config.time_step, self.config.steps_no, im_time = self.config.im_time)
         r_grid = split.Grid.linear_continuos("r", self.config.r_start, self.config.r_end, self.config.r_no, 0)
         
         polar_points, weights = roots_legendre(self.config.polar_no)
@@ -392,6 +398,9 @@ class Propagation:
         ########## operation stack creation
         operation_stack = split.OperationStack()
 
+        if self.config.im_time:
+            leak_control.add_operation(operation_stack)
+
         potential_with_bsigma_prop.add_operation(operation_stack)
         xpi_gamma_prop.add_operation(operation_stack)
 
@@ -407,8 +416,9 @@ class Propagation:
             omega_saver = split.StateSaver(f"{DATA_PATH}/{self.save_prefix}_omega_animation", time_grid, omega_grid, self.config.frames)
             omega_saver.add_operation(operation_stack)
 
-        dumping_border.add_operation(operation_stack)
-        leak_control.add_operation(operation_stack)
+        if not self.config.im_time:
+            dumping_border.add_operation(operation_stack)
+            leak_control.add_operation(operation_stack)
 
         angular_transformation.add_operation(operation_stack, True)
         if AnimationConfig.Angular in self.config.animation:
