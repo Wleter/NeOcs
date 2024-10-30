@@ -46,8 +46,10 @@ class AtomsParams:
         Ne OCS Default values.
     """
     rot_const: float = 9.243165268327e-7
-    wave_r0: float = 30
+
+    wave_r0: float = 15
     wave_r_sigma: float = 0.6
+
     mass_u: float = 15.1052848671
     energy_kelvin: float = 3700
 
@@ -64,14 +66,14 @@ class PropagationConfig:
     omega_init: int | SpinOne
     j_tot: int
 
-    time_step: float = 200
-    steps_no: float = 300
+    time_step: float = 180
+    steps_no: float = 200
 
-    r_start: float = 50 / 1024
-    r_end: float = 50
-    r_no: int = 1024
+    r_start: float = 25 / 512
+    r_end: float = 25
+    r_no: int = 512
 
-    polar_no: int = 160
+    polar_no: int = 128
     coriolis_omega_max: int = 0
 
     im_time = False
@@ -199,7 +201,7 @@ class Propagation:
         xpi_gamma_prop.set_loss_checked(loss_checker)
 
         leak_control = split.LeakControl(split.LossChecker("leak control"))
-        dumping_border = split.BorderDumping(5., 1., r_grid)
+        dumping_border = split.BorderDumping(1., 1., r_grid)
 
         angular_transformation = split.associated_legendre_transformation(polar_grid, omega_init)
 
@@ -378,7 +380,7 @@ class Propagation:
         xpi_gamma_prop.set_loss_checked(loss_checker)
 
         leak_control = split.LeakControl(split.LossChecker("leak control"))
-        dumping_border = split.BorderDumping(5., 1., r_grid)
+        dumping_border = split.BorderDumping(1., 1., r_grid)
 
         angular_transformation = split.associated_legendre_transformations(polar_grid, omega_grid)
 

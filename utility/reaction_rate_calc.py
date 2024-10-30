@@ -89,7 +89,7 @@ class ReactionDependence:
                 filename = file_pattern(parameter)
                 losses = Losses(self.path, filename, j_init, omega_init)
             else:
-                losses = Losses(self.path, f"{self.unchanged_filename_prefix}_{j_init}_{omega_init}", j_init, omega_init)
+                losses = Losses(self.path, f"{self.unchanged_filename_prefix}_{j_init}_{omega_init}.dat", j_init, omega_init)
 
 
             match self.param_type:
@@ -107,7 +107,6 @@ class ReactionDependence:
         if fig_ax is None:
             fig, ax = plot()
             ax.set_ylabel("Reaction rate ratio")
-            ax.legend()
         else:
             fig, ax = fig_ax
 
@@ -124,14 +123,14 @@ class ReactionDependence:
                 ax.plot(self.parameters, (r10 + r11) / r00, "o-", label = "DI", color = "blue")
                 ax.plot(self.parameters, r10 / r00, "o-", label = r"DI, $\Omega=0$", color = "steelblue")
                 ax.plot(self.parameters, r11 / r00, "o-", label = r"DI, $|\Omega|=1$", color = "deepskyblue")
-
+                
+        ax.legend()
         return fig, ax
     
     def plot_j_0(self, file_pattern: Callable[[float], str], fig_ax: Optional[tuple[Figure, Axes]] = None) -> tuple[Figure, Axes]:
         if fig_ax is None:
             fig, ax = plot()
             ax.set_ylabel("Reaction rate [cm$^3$/s]")
-            ax.legend()
         else:
             fig, ax = fig_ax
 
@@ -143,13 +142,13 @@ class ReactionDependence:
             case Ionization.Dissociative:
                 ax.plot(self.parameters, r00, "o-", label = "DI", color = "blue")
 
+        ax.legend()
         return fig, ax
     
     def plot_j_1(self, file_pattern: Callable[[float, int, int], str], fig_ax: Optional[tuple[Figure, Axes]] = None) -> tuple[Figure, Axes]:
         if fig_ax is None:
             fig, ax = plot()
             ax.set_ylabel("Reaction rate [cm$^3$/s]")
-            ax.legend()
         else:
             fig, ax = fig_ax
 
@@ -166,4 +165,5 @@ class ReactionDependence:
                 ax.plot(self.parameters, r10, "o-", label = r"DI, $j=1, \Omega=0$", color = "steelblue")
                 ax.plot(self.parameters, r11, "o-", label = r"DI, $j=1, |\Omega|=1$", color = "deepskyblue")
 
+        ax.legend()
         return fig, ax
