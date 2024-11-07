@@ -8,6 +8,7 @@ from .units import ANGS, CM_INV, KCAL_MOL, DEB
 from scipy.interpolate import CubicSpline
 from math import isnan
 import matplotlib.pyplot as plt
+plt.rcParams['font.size'] = 16
 
 class Potential(Protocol):
     def value(self, r: Floating, theta: Floating) -> Floating:
@@ -252,4 +253,4 @@ class ForceField:
         fig, ax = plt.subplots()
         CS = ax.contourf(r, theta, potential_array, levels = 100)
         fig.colorbar(CS)
-        fig.savefig(f"{save_path}/{filename}.pdf")
+        fig.savefig(f"{save_path}/{filename}.pdf", bbox_inches = "tight")

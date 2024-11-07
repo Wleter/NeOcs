@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from matplotlib import animation
 import numpy as np
 import matplotlib.pyplot as plt
+plt.rcParams['font.size'] = 16
 from scipy.special import roots_legendre
 
 from .units import PS

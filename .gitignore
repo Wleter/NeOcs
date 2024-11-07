@@ -2,3 +2,6 @@ __pycache__
 data/
 *.npy
 cache/
+/report/*
+!/report/report.tex
+!/report/report.pdf

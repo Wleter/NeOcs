@@ -79,7 +79,7 @@ class ReactionDependence:
     param_type: ParamType = ParamType.Other
 
     unchanged_value: Optional[float] = None
-    unchanged_filename_prefix = "losses_3700"
+    unchanged_filename_prefix: str = "losses_3700"
 
     def get_reaction_rates(self, file_pattern: Callable[[float], str], j_init: int, omega_init: int) -> FloatNDArray:
         rates = []

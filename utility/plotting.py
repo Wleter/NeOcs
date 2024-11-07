@@ -59,6 +59,92 @@ def loss_plot(path: str, prefix: str):
 
     return fig, ax
 
+def with_distance(path, file_prefix: str, fig_ax: tuple[Figure, Axes]) -> Axes:
+    wave = np.load(f'{path}/{file_prefix}_distance_animation.npy')
+    r = np.load(f'{path}/{file_prefix}_distance_animation_r_grid.npy')
+    time = np.load(f'{path}/{file_prefix}_distance_animation_time.npy') / PS
+    
+    distance = r @ wave
+
+    ax2: Axes = fig_ax[1].twinx() # type: ignore
+    ax2.plot(time, distance, alpha = 0.4)
+    ax2.set_ylabel("Distance [bohr]")
+
+    return ax2
+
+@dataclass
+class LastState:
+    path: str
+    file_prefix: str
+
+    def wave_2d(self) -> tuple[Figure, Axes]:
+        wave = np.load(f'{self.path}/{self.file_prefix}_wave_animation.npy')
+        r = np.load(f'{self.path}/{self.file_prefix}_wave_animation_x_grid.npy')
+        polar = np.load(f'{self.path}/{self.file_prefix}_wave_animation_y_grid.npy')
+
+        r, polar, wave = wave_into_polar(r, polar, wave)
+
+        fig, ax = plt.subplots(subplot_kw=dict(projection="polar"))
+        ax.contourf(polar, r, wave[:, :, -1], cmap='hot', levels=50)
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.grid(False)
+
+        return fig, ax
+    
+    def angular(self) -> tuple[Figure, Axes]:
+        wave = np.load(f'{self.path}/{self.file_prefix}_angular_animation.npy')
+        l = np.load(f'{self.path}/{self.file_prefix}_angular_animation_angular_momentum_grid.npy')
+
+        fig, ax = plot()
+
+        ax.plot(l, wave[:, -1])
+
+        ax.set_xlabel('Angular momentum j')
+        ax.set_ylabel('Wave function density')
+
+        return fig, ax
+
+    def polar(self) -> tuple[Figure, Axes]: 
+        wave = np.load(f'{self.path}/{self.file_prefix}_polar_animation.npy')
+        l = np.load(f'{self.path}/{self.file_prefix}_polar_animation_theta_grid.npy')
+
+        fig, ax = plot()
+
+        ax.plot(l, wave[:, -1])
+
+        ax.set_xlabel('Angle [rad]')
+        ax.set_ylabel('Wave function density')
+
+        return fig, ax
+
+    def omega(self) -> tuple[Figure, Axes]:
+        wave = np.load(f'{self.path}/{self.file_prefix}_omega_animation.npy')
+        omega = np.load(f'{self.path}/{self.file_prefix}_omega_animation_omega_grid.npy')
+
+        fig, ax = plot()
+
+        ax.plot(omega, wave[:, -1])
+
+        ax.set_xlabel(r'Angular momentum projection $\Omega$')
+        ax.set_ylabel('Wave function density')
+        ax.set_ylim(0, 1)
+
+        return fig, ax
+
+    def distance(self) -> tuple[Figure, Axes]: 
+        wave = np.load(f'{self.path}/{self.file_prefix}_distance_animation.npy')
+        distance = np.load(f'{self.path}/{self.file_prefix}_distance_animation_r_grid.npy')
+
+        fig, ax = plot()
+
+        ax.plot(distance, wave[:, -1])
+
+        ax.set_xlabel('Distance r [bohr]')
+        ax.set_ylabel('Wave function density')
+
+        return fig, ax
+
 @dataclass
 class AlignmentPlot:
     path: str
@@ -115,7 +201,7 @@ class AlignmentPlot:
         distance = r @ wave
 
         ax2: Axes = fig_ax[1].twinx() # type: ignore
-        ax2.plot(time, distance)
+        ax2.plot(time, distance, alpha = 0.4)
         ax2.set_ylabel("Distance [bohr]")
 
         return ax2
