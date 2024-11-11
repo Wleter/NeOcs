@@ -66,8 +66,8 @@ class PropagationConfig:
     omega_init: int | SpinOne
     j_tot: int
 
-    time_step: float = 50
-    steps_no: float = 600
+    time_step: float = 200
+    steps_no: int = 150
 
     r_start: float = 5 + 25 / 512
     r_end: float = 30
