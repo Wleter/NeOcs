@@ -60,6 +60,9 @@ class SpinOne:
     population_minus_1: float
     phase_proj_minus_1: float
 
+    def __format__(self, format_spec: str) -> str:
+        return f"SpinOne({self.population_1:.1},{self.phase_proj_1:.2},{self.population_minus_1:.1},{self.phase_proj_minus_1:.2})"
+
 @dataclass
 class PropagationConfig:
     j_init: int

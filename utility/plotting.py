@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from matplotlib import pyplot as plt
+plt.rcParams['font.size'] = 16
+
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import numpy as np
@@ -194,9 +196,9 @@ class AlignmentPlot:
         return fig, ax
     
     def with_distance(self, file_prefix: str, fig_ax: tuple[Figure, Axes]) -> Axes:
-        wave = np.load(f'{self.path}/{file_prefix}_0_0_distance_animation.npy')
-        r = np.load(f'{self.path}/{file_prefix}_0_0_distance_animation_r_grid.npy')
-        time = np.load(f'{self.path}/{file_prefix}_0_0_distance_animation_time.npy') / PS
+        wave = np.load(f'{self.path}/{file_prefix}_distance_animation.npy')
+        r = np.load(f'{self.path}/{file_prefix}_distance_animation_r_grid.npy')
+        time = np.load(f'{self.path}/{file_prefix}_distance_animation_time.npy') / PS
         
         distance = r @ wave
 

@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from typing import Protocol
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 import numpy as np
 from split_op import Grid
 import os
@@ -254,3 +256,17 @@ class ForceField:
         CS = ax.contourf(r, theta, potential_array, levels = 100)
         fig.colorbar(CS)
         fig.savefig(f"{save_path}/{filename}.pdf", bbox_inches = "tight")
+
+    def show(self) -> tuple[Figure, Axes]:
+        r = np.linspace(5, 20, 300)
+        theta = np.linspace(0, np.pi, 100)
+        theta_mesh, r_mesh = np.meshgrid(theta, r, indexing="ij")
+
+        potential_array = self.value(r_mesh, theta_mesh) / CM_INV
+        potential_array = np.clip(potential_array, -np.inf, 4000)
+
+        fig, ax = plt.subplots()
+        CS = ax.contourf(r, theta, potential_array, levels = 100)
+        fig.colorbar(CS)
+
+        return fig, ax
