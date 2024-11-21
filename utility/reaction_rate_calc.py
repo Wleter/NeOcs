@@ -84,7 +84,6 @@ class ReactionDependence:
     def get_reaction_rates(self, file_pattern: Callable[[float], str], j_init: int, omega_init: int) -> FloatNDArray:
         rates = []
         for parameter in self.parameters:
-
             if parameter != self.unchanged_value:
                 filename = file_pattern(parameter)
                 losses = Losses(self.path, filename, j_init, omega_init)

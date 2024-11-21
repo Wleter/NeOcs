@@ -84,6 +84,8 @@ class PropagationConfig:
     animation: AnimationConfig = AnimationConfig.No
     frames: int = 60
 
+    coriolis_prefactor: float = 1.
+
 @dataclass
 class Transform:
     t: Callable[[Floating, Floating], Floating]
@@ -393,7 +395,7 @@ class Propagation:
         angular_prop = split.n_dim_into_propagator(angular_op.shape, angular_op.flatten(), time_grid)
 
         j_grid = angular_transformation.transformed_grid()
-        coriolis = split.NonDiagPropagator.get_coriolis(r_grid, j_grid, omega_grid, self.params.mass_u, j_tot, time_grid, step="half")
+        coriolis = split.NonDiagPropagator.get_coriolis(r_grid, j_grid, omega_grid, self.params.mass_u / self.config.coriolis_prefactor, j_tot, time_grid, step="half")
 
         fft_transformation = split.FFTTransformation(r_grid, "r momentum")
 
