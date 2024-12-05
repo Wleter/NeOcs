@@ -73,21 +73,21 @@
 
     \doubleImageCaption{api_gamma.pdf}{Data}{api_gamma_interp.pdf}{Interpolated}{Interpolation of $A\Pi$ gamma potential}
 
-\section{Reaction rate ratios dependence on force field scalings}
+\section{Reaction rate ratio dependence on scaling force field parameters}
     Scaling the parameters of the force field (fitted as well as with theoretical values)
-    did not change the reaction rate ratio from value of 1.
-    As an example we show carbo attraction strength scaling.
+    did not change significantly the reaction rate ratio between different initial j from value of 1.
+    As an example we show carbon attraction strength scaling of fitted force field.
 
     \begin{figure}[H]
         \centering
         \begin{subfigure}{.4\linewidth}
             \centering
-            \includegraphics[width=\linewidth]{attr_c_scaling_ff_0.pdf}
+            \includegraphics[width=\linewidth]{attr_c_scaling_0.pdf}
             \caption{Reaction rate for $j = 0$.}
         \end{subfigure}
         \begin{subfigure}{.4\linewidth}
             \centering
-            \includegraphics[width=\linewidth]{attr_c_scaling_ff_1.pdf}
+            \includegraphics[width=\linewidth]{attr_c_scaling_1.pdf}
             \caption{Reaction rate for $j = 1$.}
         \end{subfigure}     
         \caption{Calculated reaction rates dependence on carbon attraction strength.}
@@ -97,7 +97,7 @@
         \centering
         \begin{subfigure}{.7\linewidth}
             \centering
-            \includegraphics[width=\linewidth]{attr_c_scaling_ff_ratio.pdf}
+            \includegraphics[width=\linewidth]{attr_c_scaling_ratio.pdf}
         \end{subfigure} 
         \caption{Calculated reaction rate ratio between $j = 1$ and $j = 0$, dependence on carbon attraction strength.}
     \end{figure}
@@ -111,7 +111,7 @@
     \begin{equation}
         \hat{H} = -\frac{1}{2\mu} \pdv*[order=2]{}{R} + \frac{\hat{L}^2}{2 \mu R^2} + V(R, \theta),
     \end{equation}
-    this frame is equivalent to body-fixed frame that we use for calculations with rotational constant $B = 0$,
+    this frame is equivalent to the body-fixed frame that we use for calculations, with rotational constant $B = 0$,
     the Hamiltonian is
     \begin{equation}
         \hat{H} = -\frac{1}{2\mu} \pdv*[order=2]{}{R} + \frac{(\hat{J} - \hat{j})^2}{2 \mu R^2} + V(R, \theta).
@@ -125,9 +125,10 @@
         V(r, \theta) = \frac{\mu \omega^2}{2} (r - r_0)^2.
     \end{equation}
 
-    The calculated ground state energy of the space-fixed Hamiltonian is equal to $\omega$ for projection $m = 0$.
+    The calculated ground state energy of the space-fixed Hamiltonian is equal to $\omega$ for projection $m_l = 0$.
     For the body-fixed Hamiltonian the calculated ground state for $J = 2$ is also $\omega$ with 
-    coriolis effect and $1.08\omega$ if we neglect the coriolis effect and with $\Omega_\text{init} = 0$.
+    coriolis effect and $1.08\omega$ if we neglect the coriolis effect and set $\Omega_\text{init} = 0$.
+    Calculated wave-functions of the calculated ground state with and without coriolis effect are shown below.
 
     \begin{figure}[H]
         \centering
@@ -147,7 +148,7 @@
             \centering
             \includegraphics[width=\linewidth]{harmonic_iso_polar.pdf}
         \end{subfigure}
-        \caption{Wave function densities for calculated ground state for $J = 2$ without coriolis effect.}
+        \caption{Wave function densities for calculated ground state with $J = 2$ and without coriolis effect.}
     \end{figure}
 
     \begin{figure}[H]
@@ -168,11 +169,11 @@
             \centering
             \includegraphics[width=\linewidth]{harmonic_iso_coriolis_polar.pdf}
         \end{subfigure}   
-        \caption{Wave function calculated ground state for $J = 2$ with coriolis effect.}
+        \caption{Wave function densities for calculated ground state with $J = 2$ and coriolis effect.}
     \end{figure}
 
     For the potential of the form $V(r, \theta, \phi)$ the space-fixed Hamiltonian doesn't have any
-    conserved angular numbers, however in body-fixed frame we have still $J$ conserved.
+    conserved angular numbers, however in the body-fixed frame we have still $J$ conserved.
     It can be deduced that in the case of $B = 0$, $J$ gives additional infinite degeneracy.
     Because of that, for every conserved $J$, the ground state is $\omega$, however it is only achievable
     with the inclusion of the coriolis effect.
@@ -192,7 +193,7 @@
 \section{Reaction rate dependence on the coriolis effect body-fixed projection cutoff}
     Animations of collision with high $\Omega_\text{max}$ showed that the mixing of 
     the total projection is up to $\Omega = 45$. However reaction rate calculations converge 
-    for $\Omega_\text{max} = 2$ as shown below.
+    for $\Omega_\text{max} = 2$ as shown below, which means that mixing of $\Omega$ happens mostly after the collision.
 
     \begin{figure}[H]
         \centering
@@ -218,7 +219,7 @@
         \caption{Calculated reaction rate ratio between $j = 1$ and $j = 0$, dependence on $\Omega_\text{max}$.}
     \end{figure}
 
-\section{Superposition reaction rate}
+\section{Reaction rate for superposition states}
     For the initial state $j = 1$ being the superposition of initial body-fixed projections
     \begin{equation}
         \ket{\psi} = \frac{1}{\sqrt{3}} \left(e^{i\phi_{-1}}\ket{-1} + \ket{0} + e^{\phi_1}\ket{1}\right),
@@ -255,9 +256,9 @@
         \caption{Reaction rate ratios for different relative phases.}
     \end{figure}
     Notice that the reaction rate ratio changes from 1 far more for DI channel than the PI channel, 
-    which is consistent with the results of the experiment.
+    which is consistent with the results of the experiment for which ratio for PI is much closer to 1 and DI is not.
 
-    We additionally calculated, for every relative phases, the alignment evolution as shown below.
+    We additionally calculated, for every relative phases, the alignment evolution as shown below. 
     \begin{figure}[H]
         \centering
         \begin{subfigure}{.7\linewidth}
